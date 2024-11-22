@@ -24,5 +24,10 @@ namespace Tic_Tac_Toe_Game
         {
             InitializeComponent();
         }
+
+        private void GameGrid_MouseDown()
+        {
+
+        }
     }
 }
