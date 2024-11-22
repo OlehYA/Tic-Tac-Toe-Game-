@@ -31,6 +31,20 @@ namespace Tic_Tac_Toe_Game
             {Player.O, new ObjectAnimationUsingKeyFrames() }
         };
 
+        private readonly DoubleAnimation fadeOutAnimation = new DoubleAnimation
+        {
+            Duration = TimeSpan.FromSeconds(.5),
+            From = 1,
+            To = 0
+        };
+
+        private readonly DoubleAnimation fadeInAnimation = new DoubleAnimation
+        {
+            Duration = TimeSpan.FromSeconds(.5),
+            From = 0,
+            To = 1
+        };
+
         private readonly Image[,] imageControls = new Image[3, 3];
         private readonly GameState gameState = new GameState();
 
@@ -63,7 +77,7 @@ namespace Tic_Tac_Toe_Game
             animations[Player.X].Duration = TimeSpan.FromSeconds(.25);
             animations[Player.O].Duration = TimeSpan.FromSeconds(.25);
 
-            for(int i =0; i< 16; i++)
+            for (int i = 0; i < 16; i++)
             {
                 Uri xUri = new Uri($"pack://application:,,,/Assets/X{i}.png");
                 BitmapImage xImg = new BitmapImage(xUri);
@@ -78,21 +92,34 @@ namespace Tic_Tac_Toe_Game
             }
         }
 
-        private void TransitionToEndScreen(string text, ImageSource winnerImage)
+        private async Task FadeOut(UIElement uIElement)
         {
-            TurnPanel.Visibility = Visibility.Hidden;
-            GameCanvas.Visibility = Visibility.Hidden;
+            uIElement.BeginAnimation(OpacityProperty, fadeOutAnimation);
+            await Task.Delay(fadeOutAnimation.Duration.TimeSpan);
+            uIElement.Visibility = Visibility.Hidden;
+        }
+
+        private async Task FadeIn(UIElement uIElement)
+        {
+            uIElement.Visibility = Visibility.Visible;
+            uIElement.BeginAnimation(OpacityProperty, fadeInAnimation);
+            await Task.Delay(fadeInAnimation.Duration.TimeSpan);
+        }
+
+        private async Task TransitionToEndScreen(string text, ImageSource winnerImage)
+        {
+            await Task.WhenAll(FadeOut(TurnPanel), FadeIn(GameCanvas));
             ResultText.Text = text;
             WinnerImage.Source = winnerImage;
             EndScreen.Visibility = Visibility.Visible;
+            await FadeIn(EndScreen);
         }
 
-        private void TransitionToGameScreen()
+        private async Task TransitionToGameScreen()
         {
-            EndScreen.Visibility = Visibility.Hidden;
+            await FadeOut(EndScreen);
             Line.Visibility = Visibility.Hidden;
-            TurnPanel.Visibility = Visibility.Visible;
-            GameCanvas.Visibility = Visibility.Visible;
+            await Task.WhenAll(FadeIn(TurnPanel), FadeIn(GameCanvas));
 
         }
 
@@ -109,7 +136,7 @@ namespace Tic_Tac_Toe_Game
             if (winInfo.Type == WinType.Column)
             {
                 double x = winInfo.Number * squareSize + margin;
-                return (new Point(0, x), new Point(x, GameGrid.Height));
+                return (new Point(x, 0), new Point(x, GameGrid.Height));
             }
             if (winInfo.Type == WinType.MainDiagonal)
             {
@@ -119,15 +146,32 @@ namespace Tic_Tac_Toe_Game
             return (new Point(GameGrid.Width, 0), new Point(0, GameGrid.Height));
         }
 
-        private void ShowLine(WinInfo winInfo)
+        private async Task ShowLine(WinInfo winInfo)
         {
             (Point start, Point end) = FindLinePoints(winInfo);
 
             Line.X1 = start.X;
             Line.Y1 = start.Y;
 
-            Line.X2 = end.X;
-            Line.Y2 = end.Y;
+            DoubleAnimation x2Animation = new DoubleAnimation
+            {
+                Duration = TimeSpan.FromSeconds(.5),
+                From = start.X,
+                To = end.X
+            };
+
+            DoubleAnimation y2Animation = new DoubleAnimation
+            {
+                Duration = TimeSpan.FromSeconds(.5),
+                From = start.Y,
+                To = end.Y
+            };
+
+            Line.Visibility = Visibility.Visible;
+            Line.BeginAnimation(Line.X2Property, x2Animation);
+            Line.BeginAnimation(Line.Y2Property, y2Animation);
+            await Task.Delay(x2Animation.Duration.TimeSpan);
+
         }
 
         private void OnMoveMade(int r, int c)
@@ -143,28 +187,29 @@ namespace Tic_Tac_Toe_Game
 
             if (gameResult.Winner == Player.None)
             {
-                TransitionToEndScreen("Its a tie!,", null);
+                await TransitionToEndScreen("Its a tie!,", null);
             }
             else
             {
-                ShowLine(gameResult.WinInfo);
+                await ShowLine(gameResult.WinInfo);
                 await Task.Delay(1000);
-                TransitionToEndScreen("Winner:", imageSources[gameResult.Winner]);
+                await TransitionToEndScreen("Winner:", imageSources[gameResult.Winner]);
             }
         }
 
-        private void OnGameRestarted()
+        private async void OnGameRestarted()
         {
             for (int r = 0; r < 3; r++)
             {
                 for (int c = 0; c < 3; c++)
                 {
+                    imageControls[r, c].BeginAnimation(Image.SourceProperty, null);
                     imageControls[r, c].Source = null;
                 }
             }
 
             PlayerImage.Source = imageSources[gameState.CurrentPlayer];
-            TransitionToGameScreen();
+            await TransitionToGameScreen();
         }
 
         private void GameGrid_MouseDown(object sender, MouseButtonEventArgs e)
@@ -178,7 +223,10 @@ namespace Tic_Tac_Toe_Game
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {
-            gameState.Reset();
+            if (gameState.GameOver)
+            {
+                gameState.Reset();
+            }
         }
     }
 }
