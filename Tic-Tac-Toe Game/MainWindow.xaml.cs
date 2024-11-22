@@ -31,24 +31,67 @@ namespace Tic_Tac_Toe_Game
         {
             InitializeComponent();
             SetupGameGrid();
+
+            gameState.MoveMade += OnMoveMade;
+            gameState.GameEnded += OnGameEnded;
+            gameState.GameRestarted += OnGameRestarted;
         }
 
         private void SetupGameGrid()
         {
-          for(int r =0; r < 3;r++)
+            for (int r = 0; r < 3; r++)
             {
-                for(int c =0; c< 3;c++)
+                for (int c = 0; c < 3; c++)
                 {
                     Image imageControl = new Image();
                     GameGrid.Children.Add(imageControl);
-                    imageControls[r,c] = imageControl;
+                    imageControls[r, c] = imageControl;
                 }
             }
         }
 
-        private void GameGrid_MouseDown(object sender, MouseButtonEventArgs e)
+        private void TransitionToEndScreen(string text, ImageSource winnerImage)
+        {
+            TurnPanel.Visibility = Visibility.Hidden;
+            GameCanvas.Visibility = Visibility.Hidden;
+            ResultText.Text= text;
+            WinnerImage.Source = winnerImage;
+            EndScreen.Visibility = Visibility.Visible;
+        }
+
+        private void OnMoveMade(int r, int c)
+        {
+            Player player = gameState.GameGrid[r, c];
+            imageControls[r, c].Source = imageSources[player];
+            PlayerImage.Source = imageSources[gameState.CurrentPlayer];
+        }
+
+        private async void OnGameEnded(GameResult gameResult)
+        {
+            await Task.Delay(1000);
+
+            if(gameResult.Winner == Player.None)
+            {
+                TransitionToEndScreen("Its a tie!,", null);
+            }
+            else
+            {
+                TransitionToEndScreen("Winner:", imageSources[gameResult.Winner]);  
+            }
+        }
+
+        private void OnGameRestarted()
         {
 
+        }
+
+        private void GameGrid_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            double squareSize = GameGrid.Width / 3;
+            Point clickPosition = e.GetPosition(GameGrid);
+            int row = (int)(clickPosition.Y / squareSize);
+            int col = (int)(clickPosition.X / squareSize);
+            gameState.MakeMove(row, col);
         }
 
         private void Button_Click(object sender, RoutedEventArgs e)
