@@ -59,6 +59,14 @@ namespace Tic_Tac_Toe_Game
             EndScreen.Visibility = Visibility.Visible;
         }
 
+        private void TransitionToGameScreen()
+        {
+            EndScreen.Visibility = Visibility.Hidden;
+            TurnPanel.Visibility= Visibility.Visible;
+            GameCanvas.Visibility = Visibility.Visible;
+
+        }
+
         private void OnMoveMade(int r, int c)
         {
             Player player = gameState.GameGrid[r, c];
@@ -82,7 +90,16 @@ namespace Tic_Tac_Toe_Game
 
         private void OnGameRestarted()
         {
+            for(int r =0; r<3; r++)
+            {
+                for(int c =0; c<3; c++)
+                {
+                    imageControls[r, c].Source = null;
+                }
+            }
 
+            PlayerImage.Source = imageSources[gameState.CurrentPlayer];
+            TransitionToGameScreen();
         }
 
         private void GameGrid_MouseDown(object sender, MouseButtonEventArgs e)
@@ -96,7 +113,7 @@ namespace Tic_Tac_Toe_Game
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {
-
+            gameState.Reset();
         }
     }
 }
